@@ -190,6 +190,12 @@ final class MenuBarController: NSObject, NSMenuDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
+        if monitor.doneCount > 0 {
+            let clearItem = NSMenuItem(title: "Clear Done", action: #selector(clearDone), keyEquivalent: "r")
+            clearItem.target = self
+            menu.addItem(clearItem)
+        }
+
         let quitItem = NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quitItem)
 
@@ -197,6 +203,10 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     }
 
     // MARK: - Actions
+
+    @objc private func clearDone() {
+        monitor.acknowledgeDone()
+    }
 
     @objc private func sessionClicked(_ sender: NSMenuItem) {
         guard let tty = sender.representedObject as? String else { return }
