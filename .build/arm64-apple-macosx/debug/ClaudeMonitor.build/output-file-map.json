@@ -1,0 +1,33 @@
+{
+  "": {
+    "swift-dependencies": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/master.swiftdeps"
+  },
+  "/Users/adamcorbin/Projects/claude_monitor/ClaudeMonitor/ClaudeMonitorApp.swift": {
+    "dependencies": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/ClaudeMonitorApp.d",
+    "object": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/ClaudeMonitorApp.swift.o",
+    "swiftmodule": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/ClaudeMonitorApp~partial.swiftmodule",
+    "swift-dependencies": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/ClaudeMonitorApp.swiftdeps",
+    "diagnostics": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/ClaudeMonitorApp.dia"
+  },
+  "/Users/adamcorbin/Projects/claude_monitor/ClaudeMonitor/MenuBarController.swift": {
+    "dependencies": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/MenuBarController.d",
+    "object": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/MenuBarController.swift.o",
+    "swiftmodule": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/MenuBarController~partial.swiftmodule",
+    "swift-dependencies": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/MenuBarController.swiftdeps",
+    "diagnostics": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/MenuBarController.dia"
+  },
+  "/Users/adamcorbin/Projects/claude_monitor/ClaudeMonitor/Models.swift": {
+    "dependencies": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/Models.d",
+    "object": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/Models.swift.o",
+    "swiftmodule": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/Models~partial.swiftmodule",
+    "swift-dependencies": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/Models.swiftdeps",
+    "diagnostics": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/Models.dia"
+  },
+  "/Users/adamcorbin/Projects/claude_monitor/ClaudeMonitor/SessionMonitor.swift": {
+    "dependencies": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/SessionMonitor.d",
+    "object": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/SessionMonitor.swift.o",
+    "swiftmodule": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/SessionMonitor~partial.swiftmodule",
+    "swift-dependencies": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/SessionMonitor.swiftdeps",
+    "diagnostics": "/Users/adamcorbin/Projects/claude_monitor/.build/arm64-apple-macosx/debug/ClaudeMonitor.build/SessionMonitor.dia"
+  }
+}
