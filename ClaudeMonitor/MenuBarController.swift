@@ -94,42 +94,65 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         }
     }
 
-    /// Query iTerm2 for a mapping of ttyXXX → tab title
+    /// Query iTerm2 for a mapping of ttyXXX → tab title using the Python API
+    /// This gets the actual tab title (autoNameFormat) which reflects user-set names
     private static func fetchTabNames() -> [String: String] {
-        // Get the raw session name from iTerm2, then extract just the title
-        // Session name format: "<icon> <title> (<process>)" e.g. "✳ My Project (claude)"
-        let script = """
-        set output to ""
-        tell application "iTerm2"
-            repeat with w in windows
-                repeat with t in tabs of w
-                    repeat with s in sessions of t
-                        set ttyPath to tty of s
-                        set sessName to name of s
-                        set output to output & ttyPath & "||" & sessName & linefeed
-                    end repeat
-                end repeat
-            end repeat
-        end tell
-        return output
+        let pythonScript = """
+        import iterm2, asyncio
+        async def main():
+            connection = await iterm2.Connection.async_create()
+            app = await iterm2.async_get_app(connection)
+            for window in app.windows:
+                for tab in window.tabs:
+                    tab_title = await tab.async_get_variable('title')
+                    for session in tab.sessions:
+                        tty = await session.async_get_variable('tty')
+                        short_tty = tty.replace('/dev/', '')
+                        print(f'{short_tty}||{tab_title}')
+        asyncio.run(main())
         """
 
-        guard let appleScript = NSAppleScript(source: script) else { return [:] }
-        var error: NSDictionary?
-        let result = appleScript.executeAndReturnError(&error)
+        let process = Process()
+        let pipe = Pipe()
 
-        if error != nil { return [:] }
-        guard let output = result.stringValue else { return [:] }
+        // Find python3 with iterm2 module — check common paths
+        let pythonPaths = [
+            "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3",
+            "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3",
+            "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+            "/opt/homebrew/bin/python3",
+            "/usr/local/bin/python3",
+            "/usr/bin/python3"
+        ]
+        guard let pythonPath = pythonPaths.first(where: { FileManager.default.fileExists(atPath: $0) }) else {
+            debugLog("ERROR: no python3 found")
+            return [:]
+        }
+        process.executableURL = URL(fileURLWithPath: pythonPath)
+        process.arguments = ["-c", pythonScript]
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+
+        do {
+            try process.run()
+        } catch {
+            debugLog("ERROR: python3 failed to launch: \(error)")
+            return [:]
+        }
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+
+        guard let output = String(data: data, encoding: .utf8) else { return [:] }
 
         var mapping: [String: String] = [:]
         for line in output.components(separatedBy: "\n") {
             let parts = line.components(separatedBy: "||")
             if parts.count == 2 {
                 let tty = parts[0].trimmingCharacters(in: .whitespaces)
-                let rawName = parts[1].trimmingCharacters(in: .whitespaces)
-                let shortTTY = tty.replacingOccurrences(of: "/dev/", with: "")
-                if !shortTTY.isEmpty {
-                    mapping[shortTTY] = cleanTabTitle(rawName)
+                let title = parts[1].trimmingCharacters(in: .whitespaces)
+                if !tty.isEmpty && !title.isEmpty {
+                    mapping[tty] = cleanTabTitle(title)
                 }
             }
         }
@@ -137,27 +160,13 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         return mapping
     }
 
-    /// Extract just the title from iTerm2 session name
-    /// Input: "✳ My Project (claude)" → Output: "My Project"
-    /// Input: "Default (zsh)" → Output: "Default"
+    /// Clean up the tab title — remove leading status icons like ✳ ⠐
     private static func cleanTabTitle(_ raw: String) -> String {
         var title = raw
-
-        // Remove leading status icon characters (non-ASCII prefix before first ASCII letter)
-        // Common icons: ✳, ⠐, ✅, etc.
         while let first = title.unicodeScalars.first,
               !first.properties.isAlphabetic || !first.isASCII {
             title = String(title.dropFirst())
         }
-        title = title.trimmingCharacters(in: .whitespaces)
-
-        // Remove trailing " (process)" suffix
-        if let parenRange = title.range(of: " (", options: .backwards) {
-            if title.hasSuffix(")") {
-                title = String(title[title.startIndex..<parenRange.lowerBound])
-            }
-        }
-
         return title.trimmingCharacters(in: .whitespaces)
     }
 
