@@ -48,10 +48,43 @@ Click any session to switch directly to that iTerm2 tab. Clicking a "Done" sessi
 - iTerm2 (for tab title display and tab switching)
 - Grant Automation permission for ClaudeMonitor to control iTerm2 when prompted
 
+## Setup
+
+### Quick Setup
+
+Run the setup script to install dependencies and enable the iTerm2 Python API:
+
+```bash
+./setup.sh
+```
+
+### Manual Setup
+
+The menu dropdown shows iTerm2 tab names using the iTerm2 Python API. To enable this:
+
+1. **Install the `iterm2` Python package:**
+
+   ```bash
+   pip3 install iterm2
+   ```
+
+2. **Enable the iTerm2 Python API:**
+
+   Go to iTerm2 > Settings > General > Magic > check **Enable Python API**
+
+   Or run:
+
+   ```bash
+   defaults write com.googlecode.iterm2 EnableAPIServer -bool true
+   ```
+
+   Then restart iTerm2 for the setting to take effect.
+
+Without these, the app still works but sessions will show TTY names (e.g. `ttys004`) instead of tab titles.
+
 ## Build & Run
 
 ```bash
-cd /Users/adamcorbin/Projects/claude_monitor
 swift build
 swift run
 ```
