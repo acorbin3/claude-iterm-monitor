@@ -81,13 +81,30 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         updateDisplay()
     }
 
-    /// Refresh tab names on a background thread, then update menu on main
+    /// Refresh tab names on a background thread, then update menu on main.
+    /// Guards against overlapping refreshes so we don't pile up python processes.
+    private var isRefreshing = false
+    private var lastRefreshTime: Date = .distantPast
+    private static let minRefreshInterval: TimeInterval = 5.0  // Don't re-fetch within 5s
+
     private func refreshTabNamesAsync() {
+        guard !isRefreshing else { return }
+        let elapsed = Date().timeIntervalSince(lastRefreshTime)
+        guard elapsed >= Self.minRefreshInterval else {
+            debugLog("Tab name refresh skipped — only \(String(format: "%.1f", elapsed))s since last refresh")
+            return
+        }
+        isRefreshing = true
+        lastRefreshTime = Date()
+
         refreshQueue.async { [weak self] in
             let mapping = Self.fetchTabNames()
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                self.ttyToTabName = mapping
+                self.isRefreshing = false
+                if !mapping.isEmpty {
+                    self.ttyToTabName = mapping
+                }
                 self.buildMenu()
                 debugLog("Tab names refreshed async: \(mapping.count) entries")
             }
@@ -95,12 +112,19 @@ final class MenuBarController: NSObject, NSMenuDelegate {
     }
 
     /// Query iTerm2 for a mapping of ttyXXX → tab title using the Python API
-    /// This gets the actual tab title (autoNameFormat) which reflects user-set names
+    /// Includes a timeout to prevent hanging when the API is not enabled
+    private static let fetchTimeout: TimeInterval = 5.0
+
     private static func fetchTabNames() -> [String: String] {
         let pythonScript = """
-        import iterm2, asyncio
+        import iterm2, asyncio, sys
         async def main():
-            connection = await iterm2.Connection.async_create()
+            try:
+                connection = await asyncio.wait_for(
+                    iterm2.Connection.async_create(), timeout=3
+                )
+            except (asyncio.TimeoutError, ConnectionRefusedError, OSError):
+                sys.exit(1)
             app = await iterm2.async_get_app(connection)
             for window in app.windows:
                 for tab in window.tabs:
@@ -140,10 +164,24 @@ final class MenuBarController: NSObject, NSMenuDelegate {
             return [:]
         }
 
+        // Kill the process if it takes too long (API not enabled, module missing, etc.)
+        let killWork = DispatchWorkItem {
+            if process.isRunning {
+                debugLog("WARNING: fetchTabNames timed out after \(fetchTimeout)s, killing python3")
+                process.terminate()
+            }
+        }
+        DispatchQueue.global().asyncAfter(deadline: .now() + fetchTimeout, execute: killWork)
+
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
+        killWork.cancel()
 
-        guard let output = String(data: data, encoding: .utf8) else { return [:] }
+        guard process.terminationStatus == 0,
+              let output = String(data: data, encoding: .utf8) else {
+            debugLog("fetchTabNames: python exited with status \(process.terminationStatus)")
+            return [:]
+        }
 
         var mapping: [String: String] = [:]
         for line in output.components(separatedBy: "\n") {
@@ -228,6 +266,8 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         activateITermSession(tty: tty)
     }
 
+    private static let appleScriptTimeout: TimeInterval = 5.0
+
     private func activateITermSession(tty: String) {
         let devicePath = "/dev/\(tty)"
         let script = """
@@ -247,11 +287,35 @@ final class MenuBarController: NSObject, NSMenuDelegate {
         end tell
         """
 
-        if let appleScript = NSAppleScript(source: script) {
-            var error: NSDictionary?
-            appleScript.executeAndReturnError(&error)
-            if let error = error {
-                debugLog("AppleScript error: \(error)")
+        // Run AppleScript off the main thread with a timeout to prevent UI freezes
+        DispatchQueue.global(qos: .userInitiated).async {
+            let process = Process()
+            let pipe = Pipe()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+            process.arguments = ["-e", script]
+            process.standardOutput = pipe
+            process.standardError = FileHandle.nullDevice
+
+            do {
+                try process.run()
+            } catch {
+                debugLog("AppleScript failed to launch: \(error)")
+                return
+            }
+
+            let killWork = DispatchWorkItem {
+                if process.isRunning {
+                    debugLog("WARNING: AppleScript timed out after \(Self.appleScriptTimeout)s, killing osascript")
+                    process.terminate()
+                }
+            }
+            DispatchQueue.global().asyncAfter(deadline: .now() + Self.appleScriptTimeout, execute: killWork)
+
+            process.waitUntilExit()
+            killWork.cancel()
+
+            if process.terminationStatus != 0 {
+                debugLog("AppleScript exited with status \(process.terminationStatus)")
             }
         }
     }
